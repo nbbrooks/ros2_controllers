@@ -95,6 +95,8 @@ if(BUILD_TESTING)
     hardware_interface
     ros2_control_test_assets
   )
+  # prevent pluginlib from using boost
+  target_compile_definitions(test_multi_interface_forward_controller PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 endif()
 
 ament_export_dependencies(
