@@ -82,6 +82,7 @@ if(BUILD_TESTING)
     realtime_tools
     ros2_control_test_assets
   )
+  target_compile_definitions(test_force_torque_sensor_controller PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
 endif()
 
 ament_export_include_directories(
