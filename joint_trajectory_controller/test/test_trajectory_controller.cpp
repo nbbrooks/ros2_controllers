@@ -64,35 +64,6 @@ void spin(rclcpp::executors::MultiThreadedExecutor * exe)
 }
 
 
-TEST_P(TrajectoryControllerTestParameterized, configure_param)
-{
-  SetUpTrajectoryController();
-
-  rclcpp::executors::MultiThreadedExecutor executor;
-  executor.add_node(traj_controller_->get_node()->get_node_base_interface());
-  const auto future_handle_ = std::async(std::launch::async, spin, &executor);
-
-  const auto state = traj_controller_->configure();
-  ASSERT_EQ(state.id(), State::PRIMARY_STATE_INACTIVE);
-
-  // send msg
-  builtin_interfaces::msg::Duration time_from_start;
-  time_from_start.sec = 1;
-  time_from_start.nanosec = 0;
-  std::vector<std::vector<double>> points {{{3.3, 4.4, 5.5}}};
-  publish(time_from_start, points);
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-  traj_controller_->update();
-
-  // hw position == 0 because controller is not activated
-  EXPECT_EQ(0.0, joint_pos_[0]);
-  EXPECT_EQ(0.0, joint_pos_[1]);
-  EXPECT_EQ(0.0, joint_pos_[2]);
-
-  executor.cancel();
-}
-
 TEST_P(TrajectoryControllerTestParameterized, configure)
 {
   SetUpTrajectoryController();
@@ -300,8 +271,7 @@ TEST_P(TrajectoryControllerTestParameterized, correct_initialization_using_param
 {
   SetUpTrajectoryController(false);
 
-  // This call is replacing the way parameters are set via launch
-  SetParameters();
+  SetParameters();  // This call is replacing the way parameters are set via launch
   traj_controller_->configure();
   auto state = traj_controller_->get_current_state();
   ASSERT_EQ(State::PRIMARY_STATE_INACTIVE, state.id());
@@ -635,11 +605,13 @@ TEST_P(TrajectoryControllerTestParameterized, test_partial_joint_list_not_allowe
 /**
  * @brief invalid_message Test mismatched joint and reference vector sizes
  */
-TEST_P(TrajectoryControllerTestParameterized, invalid_message)
+TEST_P(TrajectoryControllerTestParameterized, invalid_messages)
 {
   rclcpp::Parameter partial_joints_parameters("allow_partial_joints_goal", false);
+  rclcpp::Parameter deduce_states_parameters("deduce_states_from_derivatives", false);
   rclcpp::executors::SingleThreadedExecutor executor;
-  SetUpAndActivateTrajectoryController(true, {partial_joints_parameters}, &executor);
+  SetUpAndActivateTrajectoryController(
+    true, {partial_joints_parameters, deduce_states_parameters}, &executor);
 
   trajectory_msgs::msg::JointTrajectory traj_msg, good_traj_msg;
 
@@ -695,6 +667,67 @@ TEST_P(TrajectoryControllerTestParameterized, invalid_message)
   EXPECT_FALSE(traj_controller_->validate_trajectory_msg(traj_msg));
 }
 
+/// With deduce_states_from_derivatives parameter trajectory missing position or velocities
+/// are accepted
+TEST_P(TrajectoryControllerTestParameterized, missing_positions_message_accepted)
+{
+  rclcpp::Parameter deduce_states_parameters("deduce_states_from_derivatives", true);
+  rclcpp::executors::SingleThreadedExecutor executor;
+  SetUpAndActivateTrajectoryController(true, {deduce_states_parameters}, &executor);
+
+  trajectory_msgs::msg::JointTrajectory traj_msg, good_traj_msg;
+
+  good_traj_msg.joint_names = joint_names_;
+  good_traj_msg.header.stamp = rclcpp::Time(0);
+  good_traj_msg.points.resize(1);
+  good_traj_msg.points[0].time_from_start = rclcpp::Duration::from_seconds(0.25);
+  good_traj_msg.points[0].positions.resize(1);
+  good_traj_msg.points[0].positions = {1.0, 2.0, 3.0};
+  good_traj_msg.points[0].velocities.resize(1);
+  good_traj_msg.points[0].velocities = {-1.0, -2.0, -3.0};
+  good_traj_msg.points[0].accelerations.resize(1);
+  good_traj_msg.points[0].accelerations = {1.0, 2.0, 3.0};
+  EXPECT_TRUE(traj_controller_->validate_trajectory_msg(good_traj_msg));
+
+  // No position data
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].positions.clear();
+  EXPECT_TRUE(traj_controller_->validate_trajectory_msg(traj_msg));
+
+  // No position and velocity data
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].positions.clear();
+  traj_msg.points[0].velocities.clear();
+  EXPECT_TRUE(traj_controller_->validate_trajectory_msg(traj_msg));
+
+  // All empty
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].positions.clear();
+  traj_msg.points[0].velocities.clear();
+  traj_msg.points[0].accelerations.clear();
+  EXPECT_FALSE(traj_controller_->validate_trajectory_msg(traj_msg));
+
+  // Incompatible data sizes, too few positions
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].positions = {1.0, 2.0};
+  EXPECT_FALSE(traj_controller_->validate_trajectory_msg(traj_msg));
+
+  // Incompatible data sizes, too many positions
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].positions = {1.0, 2.0, 3.0, 4.0};
+  EXPECT_FALSE(traj_controller_->validate_trajectory_msg(traj_msg));
+
+  // Incompatible data sizes, too few velocities
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].velocities = {1.0};
+  EXPECT_FALSE(traj_controller_->validate_trajectory_msg(traj_msg));
+
+  // Incompatible data sizes, too few accelerations
+  traj_msg = good_traj_msg;
+  traj_msg.points[0].accelerations = {2.0};
+  EXPECT_FALSE(traj_controller_->validate_trajectory_msg(traj_msg));
+}
+
 /**
  * @brief test_trajectory_replace Test replacing an existing trajectory
  */
@@ -717,9 +750,7 @@ TEST_P(TrajectoryControllerTestParameterized, test_trajectory_replace)
   expected_desired.positions = {points_old[0].begin(), points_old[0].end()};
   //  Check that we reached end of points_old trajectory
   // Denis: delta was 0.1 with 0.2 works for me
-  std::cout << "Now waiting for state" << std::endl;
   waitAndCompareState(expected_actual, expected_desired, executor, rclcpp::Duration(delay), 0.2);
-  std::cout << "After waiting for state" << std::endl;
 
   RCLCPP_INFO(traj_node_->get_logger(), "Sending new trajectory");
   publish(time_from_start, points_partial_new);
@@ -1058,13 +1089,63 @@ INSTANTIATE_TEST_CASE_P(
   )
 );
 
-// TODO(denis): Add incorrect interface parameters
-TEST_F(TrajectoryControllerTest, incorrect_initialization_using_wrong_parameters) {
+TEST_F(TrajectoryControllerTest, incorrect_initialization_using_interface_parameters) {
+  auto set_parameter_and_check_result = [&] () {
+    SetParameters(); // This call is replacing the way parameters are set via launch
+    traj_controller_->configure();
+    auto state = traj_controller_->get_current_state();
+    EXPECT_EQ(state.id(), State::PRIMARY_STATE_FINALIZED);
+  };
+
   SetUpTrajectoryController(false);
 
-  // This call is replacing the way parameters are set via launch
-  SetParameters();
-  traj_controller_->configure();
-  auto state = traj_controller_->get_current_state();
-  ASSERT_EQ(State::PRIMARY_STATE_INACTIVE, state.id());
+  // command interfaces: empty
+  command_interface_types_ = {};
+  set_parameter_and_check_result();
+
+  // command interfaces: bad_name
+  command_interface_types_ = {"bad_name"};
+  set_parameter_and_check_result();
+
+  // command interfaces: effort not yet implemented
+  command_interface_types_ = {"effort"};
+  set_parameter_and_check_result();
+
+  // command interfaces: effort has to be only
+  command_interface_types_ = {"effort", "position"};
+  set_parameter_and_check_result();
+
+  // command interfaces: velocity alone not yet implemented
+  command_interface_types_ = {"velocity"};
+  set_parameter_and_check_result();
+
+  // command interfaces: velocity - position not present
+  command_interface_types_ = {"velocity", "acceleration"};
+  set_parameter_and_check_result();
+
+  // command interfaces: acceleration without position and velocity
+  command_interface_types_ = {"acceleration"};
+  set_parameter_and_check_result();
+
+  // state interfaces: empty
+  state_interface_types_ = {};
+  set_parameter_and_check_result();
+
+  // state interfaces: cannot not be effort
+  state_interface_types_ = {"effort"};
+  set_parameter_and_check_result();
+
+  // state interfaces: bad name
+  state_interface_types_ = {"bad_name"};
+  set_parameter_and_check_result();
+
+  // state interfaces: velocity - position not present
+  state_interface_types_ = {"velocity"};
+  set_parameter_and_check_result();
+  state_interface_types_ = {"velocity", "acceleration"};
+  set_parameter_and_check_result();
+
+  // state interfaces: acceleration without position and velocity
+  state_interface_types_ = {"acceleration"};
+  set_parameter_and_check_result();
 }
