@@ -42,6 +42,7 @@ jobs:
             effort_controllers
             force_torque_sensor_controller
             forward_command_controller
+            joint_state_broadcaster
             joint_state_controller
             joint_trajectory_controller
             position_controllers
