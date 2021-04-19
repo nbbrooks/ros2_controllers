@@ -38,7 +38,7 @@ controller_interface::return_type
 ForwardCommandController::init(const std::string & controller_name)
 {
   auto ret = ControllerInterface::init(controller_name);
-  if (ret != controller_interface::return_type::SUCCESS) {
+  if (ret != controller_interface::return_type::OK) {
     return ret;
   }
 
@@ -50,7 +50,7 @@ ForwardCommandController::init(const std::string & controller_name)
     return controller_interface::return_type::ERROR;
   }
 
-  return controller_interface::return_type::SUCCESS;
+  return controller_interface::return_type::OK;
 }
 
 CallbackReturn ForwardCommandController::read_parameters()
@@ -171,7 +171,7 @@ controller_interface::return_type ForwardCommandController::update()
 
   // no command received yet
   if (!joint_commands || !(*joint_commands)) {
-    return controller_interface::return_type::SUCCESS;
+    return controller_interface::return_type::OK;
   }
 
   if ((*joint_commands)->data.size() != command_interfaces_.size()) {
@@ -188,7 +188,7 @@ controller_interface::return_type ForwardCommandController::update()
     command_interfaces_[index].set_value((*joint_commands)->data[index]);
   }
 
-  return controller_interface::return_type::SUCCESS;
+  return controller_interface::return_type::OK;
 }
 
 }  // namespace forward_command_controller

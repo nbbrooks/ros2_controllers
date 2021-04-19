@@ -71,14 +71,16 @@ public:
    * interfaces for the controlled joints
    */
   JOINT_TRAJECTORY_CONTROLLER_PUBLIC
-  controller_interface::InterfaceConfiguration command_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  command_interface_configuration() const override;
 
   /**
    * @brief command_interface_configuration This controller requires the position and velocity
    * state interfaces for the controlled joints
    */
   JOINT_TRAJECTORY_CONTROLLER_PUBLIC
-  controller_interface::InterfaceConfiguration state_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  state_interface_configuration() const override;
 
   JOINT_TRAJECTORY_CONTROLLER_PUBLIC
   controller_interface::return_type
@@ -133,10 +135,17 @@ protected:
   // The interfaces are defined as the types in 'allowed_interface_types_' member.
   // For convenience, for each type the interfaces are ordered so that i-th position
   // matches i-th index in joint_names_
-  std::vector<std::vector<std::reference_wrapper<hardware_interface::LoanedCommandInterface>>>
-  joint_command_interface_;
-  std::vector<std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>>>
-  joint_state_interface_;
+  template<typename T>
+  using InterfaceReferences = std::vector<std::vector<std::reference_wrapper<T>>>;
+
+  InterfaceReferences<hardware_interface::LoanedCommandInterface> joint_command_interface_;
+  InterfaceReferences<hardware_interface::LoanedStateInterface> joint_state_interface_;
+
+  bool has_velocity_state_interface_ = false;
+  bool has_acceleration_state_interface_ = false;
+  bool has_position_command_interface_ = false;
+  bool has_velocity_command_interface_ = false;
+  bool has_acceleration_command_interface_ = false;
 
   /// If true, a velocity feedforward term plus corrective PID term is used
   // TODO(anyone): This flag is not used for now
@@ -211,7 +220,6 @@ protected:
   void set_hold_position();
 
   bool reset();
-  void halt();
 
   using JointTrajectoryPoint = trajectory_msgs::msg::JointTrajectoryPoint;
   void publish_state(
@@ -222,27 +230,23 @@ protected:
   void read_state_from_hardware(JointTrajectoryPoint & state);
 
 private:
-  void resize_joint_trajectory_point(
-    trajectory_msgs::msg::JointTrajectoryPoint & point, size_t size)
-  {
-    point.positions.resize(size);
-    if (check_if_interface_type_exists(
-        state_interface_types_, hardware_interface::HW_IF_VELOCITY))
-    {
-      point.velocities.resize(size);
-    }
-    if (check_if_interface_type_exists(
-        state_interface_types_, hardware_interface::HW_IF_ACCELERATION))
-    {
-      point.accelerations.resize(size);
-    }
-  }
-
-  bool check_if_interface_type_exists(
+  bool contains_interface_type(
     const std::vector<std::string> & interface_type_list, const std::string & interface_type)
   {
     return std::find(interface_type_list.begin(), interface_type_list.end(), interface_type) !=
            interface_type_list.end();
+  }
+
+  void resize_joint_trajectory_point(
+    trajectory_msgs::msg::JointTrajectoryPoint & point, size_t size)
+  {
+    point.positions.resize(size);
+    if (has_velocity_state_interface_) {
+      point.velocities.resize(size);
+    }
+    if (has_acceleration_state_interface_) {
+      point.accelerations.resize(size);
+    }
   }
 };
 

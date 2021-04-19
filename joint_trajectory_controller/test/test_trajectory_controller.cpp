@@ -63,7 +63,6 @@ void spin(rclcpp::executors::MultiThreadedExecutor * exe)
   exe->spin();
 }
 
-
 TEST_P(TrajectoryControllerTestParameterized, configure)
 {
   SetUpTrajectoryController();
@@ -123,7 +122,7 @@ TEST_P(TrajectoryControllerTestParameterized, activate)
 //   auto traj_controller = std::make_shared<ros_controllers::JointTrajectoryController>(
 //     joint_names_, op_mode_);
 //   auto ret = traj_controller->init(test_robot_, controller_name_);
-//   if (ret != controller_interface::return_type::SUCCESS) {
+//   if (ret != controller_interface::return_type::OK) {
 //     FAIL();
 //   }
 //
@@ -165,7 +164,7 @@ TEST_P(TrajectoryControllerTestParameterized, activate)
 //   auto traj_controller = std::make_shared<ros_controllers::JointTrajectoryController>(
 //     joint_names_, op_mode_);
 //   auto ret = traj_controller->init(test_robot_, controller_name_);
-//   if (ret != controller_interface::return_type::SUCCESS) {
+//   if (ret != controller_interface::return_type::OK) {
 //     FAIL();
 //   }
 //
@@ -1096,7 +1095,6 @@ TEST_F(TrajectoryControllerTest, incorrect_initialization_using_interface_parame
     auto state = traj_controller_->get_current_state();
     EXPECT_EQ(state.id(), State::PRIMARY_STATE_FINALIZED);
   };
-
   SetUpTrajectoryController(false);
 
   // command interfaces: empty
