@@ -97,14 +97,9 @@ Trajectory::sample(
       trajectory_msgs::msg::JointTrajectoryPoint & second_state,
       const size_t dim, const double delta_t)
     {
-      // These values must be known
-      if (second_state.accelerations.empty())
-      {
-        throw std::runtime_error("Integration failed.");
-      }
-
       if (second_state.positions.empty()) {
         second_state.positions.resize(dim);
+        // Assume at rest, if a value is not specified.
         if (first_state.velocities.empty()) {
           first_state.velocities.resize(dim, 0.0);
         }
@@ -112,6 +107,9 @@ Trajectory::sample(
           second_state.velocities.resize(dim);
           if (first_state.accelerations.empty()) {
             first_state.accelerations.resize(dim, 0.0);
+          }
+          if (second_state.accelerations.empty()) {
+            second_state.accelerations.resize(dim, 0.0);
           }
           for (size_t i = 0; i < dim; ++i) {
             second_state.velocities[i] = first_state.velocities[i] +
