@@ -97,31 +97,71 @@ Trajectory::sample(
       trajectory_msgs::msg::JointTrajectoryPoint & second_state,
       const size_t dim, const double delta_t)
     {
-      if (second_state.positions.empty()) {
-        second_state.positions.resize(dim);
-        // Assume at rest, if a value is not specified.
-        if (first_state.velocities.empty()) {
-          first_state.velocities.resize(dim, 0.0);
-        }
-        if (second_state.velocities.empty()) {
-          second_state.velocities.resize(dim);
-          if (first_state.accelerations.empty()) {
-            first_state.accelerations.resize(dim, 0.0);
-          }
-          if (second_state.accelerations.empty()) {
-            second_state.accelerations.resize(dim, 0.0);
-          }
-          for (size_t i = 0; i < dim; ++i) {
-            second_state.velocities[i] = first_state.velocities[i] +
-              (first_state.accelerations[i] + second_state.accelerations[i]) * 0.5 * delta_t;
-          }
-        }
+      // Previous position must be known already
+      if (first_state.positions.empty())
+      {
+        throw std::runtime_error("Integration failed. A required position term is unknown.");
+      }
+      // We can skip these terms, e.g. if second_state.positions or .accelerations is missing
+      // TODO(andyz): I assume it's not realtime safe to declare these variables here?
+      bool have_first_velocities = !first_state.velocities.empty();
+      bool have_first_accelerations = !first_state.accelerations.empty();
+      bool have_second_accelerations = !second_state.accelerations.empty();
+
+      // Calculate missing terms
+      if (second_state.velocities.empty())
+      {
+        second_state.velocities.resize(dim);
         for (size_t i = 0; i < dim; ++i) {
-          // second state velocity should be reached on the end of the segment, so use middle
-          second_state.positions[i] = first_state.positions[i] +
-            (first_state.velocities[i] + second_state.velocities[i]) * 0.5 * delta_t;
+          if (have_first_velocities)
+            second_state.velocities[i] += first_state.velocities[i];
+          if (have_first_accelerations && have_second_accelerations)
+            second_state.velocities[i] += (first_state.accelerations[i] + second_state.accelerations[i]) * 0.5 * delta_t;
+          else if (have_first_accelerations)
+            second_state.velocities[i] += first_state.accelerations[i] * delta_t;
+          else if (have_second_accelerations)
+            second_state.velocities[i] += second_state.accelerations[i] * delta_t;
         }
       }
+      if (second_state.positions.empty())
+      {
+        second_state.positions.resize(dim);
+        for (size_t i = 0; i < dim; ++i) {
+          second_state.positions[i] = first_state.positions[i];
+          if (have_first_velocities)
+            second_state.positions[i] += (first_state.velocities[i] + second_state.velocities[i]) * 0.5 * delta_t;
+          else
+            second_state.positions[i] += second_state.velocities[i] * delta_t;
+        }
+      }
+
+
+
+
+
+
+
+      // if (second_state.positions.empty()) {
+      //   second_state.positions.resize(dim);
+      //   if (first_state.velocities.empty()) {
+      //     first_state.velocities.resize(dim, 0.0);
+      //   }
+      //   if (second_state.velocities.empty()) {
+      //     second_state.velocities.resize(dim);
+      //     if (first_state.accelerations.empty()) {
+      //       first_state.accelerations.resize(dim, 0.0);
+      //     }
+      //     for (size_t i = 0; i < dim; ++i) {
+      //       second_state.velocities[i] = first_state.velocities[i] +
+      //         (first_state.accelerations[i] + second_state.accelerations[i]) * 0.5 * delta_t;
+      //     }
+      //   }
+      //   for (size_t i = 0; i < dim; ++i) {
+      //     // second state velocity should be reached on the end of the segment, so use middle
+      //     second_state.positions[i] = first_state.positions[i] +
+      //       (first_state.velocities[i] + second_state.velocities[i]) * 0.5 * delta_t;
+      //   }
+      // }
     };
 
   // current time hasn't reached traj time of the first point in the msg yet
