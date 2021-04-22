@@ -182,11 +182,9 @@ JointTrajectoryController::update()
       // set values for next hardware write()
       if (has_position_command_interface_) {
         assign_interface_from_point(joint_command_interface_[0], state_desired.positions);
-        std::cout << "Pos: " << state_desired.positions[0];
       }
       if (has_velocity_command_interface_) {
         assign_interface_from_point(joint_command_interface_[1], state_desired.velocities);
-        std::cout << "  Vel: " << state_desired.velocities[0] << std::endl;
       }
       if (has_acceleration_command_interface_) {
         assign_interface_from_point(joint_command_interface_[2], state_desired.accelerations);
