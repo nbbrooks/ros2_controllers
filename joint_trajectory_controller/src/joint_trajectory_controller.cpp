@@ -998,7 +998,7 @@ bool JointTrajectoryController::validate_trajectory_msg(
       if (all_empty || position_error || velocity_error || acceleration_error) {
         return false;
       }
-    } else if (
+    } else if (    // NOLINT
       !validate_trajectory_point_field(joint_count, points[i].positions, "positions", i, false) ||
       !validate_trajectory_point_field(joint_count, points[i].velocities, "velocities", i, true) ||
       !validate_trajectory_point_field(
