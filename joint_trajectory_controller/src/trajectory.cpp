@@ -98,42 +98,42 @@ Trajectory::sample(
       const size_t dim, const double delta_t)
     {
       // Previous position must be known already
-      if (first_state.positions.empty())
-      {
+      if (first_state.positions.empty()) {
         throw std::runtime_error("Integration failed. A required position term is unknown.");
       }
       // We can skip these terms, e.g. if second_state.positions or .accelerations is missing
       // Use references for readability
-      auto& have_first_velocities = !first_state.velocities.empty();
-      auto& have_first_accelerations = !first_state.accelerations.empty();
-      auto& have_second_accelerations = !second_state.accelerations.empty();
+      const auto & have_first_velocities = !first_state.velocities.empty();
+      const auto & have_first_accelerations = !first_state.accelerations.empty();
+      const auto & have_second_accelerations = !second_state.accelerations.empty();
 
       // Calculate missing terms
-      if (second_state.velocities.empty())
-      {
+      if (second_state.velocities.empty()) {
         second_state.velocities.resize(dim);
         for (size_t i = 0; i < dim; ++i) {
-          if (have_first_velocities)
+          if (have_first_velocities) {
             second_state.velocities[i] += first_state.velocities[i];
-          if (have_first_accelerations && have_second_accelerations)
+          }
+          if (have_first_accelerations && have_second_accelerations) {
             second_state.velocities[i] +=
               (first_state.accelerations[i] + second_state.accelerations[i]) * 0.5 * delta_t;
-          else if (have_first_accelerations)
+          } else if (have_first_accelerations) {
             second_state.velocities[i] += first_state.accelerations[i] * delta_t;
-          else if (have_second_accelerations)
+          } else if (have_second_accelerations) {
             second_state.velocities[i] += second_state.accelerations[i] * delta_t;
+          }
         }
       }
-      if (second_state.positions.empty())
-      {
+      if (second_state.positions.empty()) {
         second_state.positions.resize(dim);
         for (size_t i = 0; i < dim; ++i) {
           second_state.positions[i] = first_state.positions[i];
-          if (have_first_velocities)
+          if (have_first_velocities) {
             second_state.positions[i] +=
               (first_state.velocities[i] + second_state.velocities[i]) * 0.5 * delta_t;
-          else
+          } else {
             second_state.positions[i] += second_state.velocities[i] * delta_t;
+          }
         }
       }
     };
