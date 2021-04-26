@@ -1004,8 +1004,7 @@ bool JointTrajectoryController::validate_trajectory_msg(
       !validate_trajectory_point_field(
         joint_count, points[i].accelerations, "accelerations", i, true) ||
       // TODO(denis): should this be deleted, since effort goals are not supported?
-      !validate_trajectory_point_field(joint_count, points[i].effort, "effort", i, true))
-    {
+      !validate_trajectory_point_field(joint_count, points[i].effort, "effort", i, true)) {
       return false;
     }
   }
