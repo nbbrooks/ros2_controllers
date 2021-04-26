@@ -1005,7 +1005,8 @@ bool JointTrajectoryController::validate_trajectory_msg(
         joint_count, points[i].accelerations, "accelerations", i, true) ||
       // TODO(denis): should this be deleted, since effort goals are not supported?
       // uncrustify conflicts with cpplint here. Ignore the line.
-      !validate_trajectory_point_field(joint_count, points[i].effort, "effort", i, true)) {  // NOLINT
+      !validate_trajectory_point_field(joint_count, points[i].effort, "effort", i, true))    // NOLINT
+    {    // NOLINT
       return false;
     }
   }
