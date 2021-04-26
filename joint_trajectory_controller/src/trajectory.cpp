@@ -116,7 +116,8 @@ Trajectory::sample(
           if (have_first_velocities)
             second_state.velocities[i] += first_state.velocities[i];
           if (have_first_accelerations && have_second_accelerations)
-            second_state.velocities[i] += (first_state.accelerations[i] + second_state.accelerations[i]) * 0.5 * delta_t;
+            second_state.velocities[i] +=
+              (first_state.accelerations[i] + second_state.accelerations[i]) * 0.5 * delta_t;
           else if (have_first_accelerations)
             second_state.velocities[i] += first_state.accelerations[i] * delta_t;
           else if (have_second_accelerations)
@@ -129,7 +130,8 @@ Trajectory::sample(
         for (size_t i = 0; i < dim; ++i) {
           second_state.positions[i] = first_state.positions[i];
           if (have_first_velocities)
-            second_state.positions[i] += (first_state.velocities[i] + second_state.velocities[i]) * 0.5 * delta_t;
+            second_state.positions[i] +=
+              (first_state.velocities[i] + second_state.velocities[i]) * 0.5 * delta_t;
           else
             second_state.positions[i] += second_state.velocities[i] * delta_t;
         }
