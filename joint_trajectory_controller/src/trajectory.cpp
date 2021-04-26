@@ -103,10 +103,10 @@ Trajectory::sample(
         throw std::runtime_error("Integration failed. A required position term is unknown.");
       }
       // We can skip these terms, e.g. if second_state.positions or .accelerations is missing
-      // TODO(andyz): I assume it's not realtime safe to declare these variables here?
-      bool have_first_velocities = !first_state.velocities.empty();
-      bool have_first_accelerations = !first_state.accelerations.empty();
-      bool have_second_accelerations = !second_state.accelerations.empty();
+      // Use references for readability
+      auto& have_first_velocities = !first_state.velocities.empty();
+      auto& have_first_accelerations = !first_state.accelerations.empty();
+      auto& have_second_accelerations = !second_state.accelerations.empty();
 
       // Calculate missing terms
       if (second_state.velocities.empty())
