@@ -129,23 +129,22 @@ Trajectory::sample(
 
       if (!have_second_velocities)
       {
+        second_state.velocities.resize(dim);
         for (size_t i = 0; i < dim; ++i) {
-          second_state.velocities.resize(dim);
-          double v_2 = first_state.velocities[i] + first_state.accelerations[i] * delta_t;
-          second_state.velocities[i] = 2 * v_2 - first_state.velocities[i];
+          second_state.velocities[i] = first_state.velocities[i] + 0.5 * (first_state.accelerations[i] + second_state.accelerations[i]) * delta_t;
         }
       }
 
       if (!have_second_positions)
       {
+        second_state.positions.resize(dim);
         for (size_t i = 0; i < dim; ++i) {
-          second_state.positions.resize(dim);
           double x_1 = first_state.positions[i]
             + first_state.velocities[i] * delta_t
             + 0.5 * first_state.accelerations[i] * (delta_t) * (delta_t);
 
           double x_2 = first_state.positions[i]
-            + 0.5 * (first_state.velocities[i] + 0.5*(first_state.velocities[i] + second_state.velocities[i])) * delta_t
+            + 0.5 * (first_state.velocities[i] + 0.5 * (first_state.velocities[i] + second_state.velocities[i])) * delta_t
             + 0.5 * (first_state.accelerations[i] + 0.5 * (first_state.accelerations[i] + second_state.accelerations[i])) * (0.5 * delta_t) * (0.5 * delta_t);
 
           second_state.positions[i] = 2 * x_2 - x_1;
