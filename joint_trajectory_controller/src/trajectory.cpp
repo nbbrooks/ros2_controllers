@@ -141,8 +141,8 @@ Trajectory::sample(
         for (size_t i = 0; i < dim; ++i) {
           second_state.positions.resize(dim);
           double x_1 = first_state.positions[i]
-            + first_state.velocities[i] * delta_t / 2.
-            + 0.5 * first_state.accelerations[i] * (delta_t / 2.) * (delta_t / 2.);
+            + first_state.velocities[i] * delta_t
+            + 0.5 * first_state.accelerations[i] * (delta_t) * (delta_t);
 
           double x_2 = first_state.positions[i]
             + 0.5 * (first_state.velocities[i] + 0.5*(first_state.velocities[i] + second_state.velocities[i])) * delta_t
