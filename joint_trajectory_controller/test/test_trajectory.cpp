@@ -427,7 +427,7 @@ TEST(TestTrajectory, sample_trajectory_velocity_with_interpolation) {
     EXPECT_NEAR(0.0, expected_state.accelerations[0], EPS);
   }
 }
-
+/*
 // This test is added because previous one behaved strange if
 // "point_before_msg.velocities.push_back(0.0);" was not defined
 TEST(TestTrajectory, sample_trajectory_velocity_with_interpolation_strange_without_vel) {
@@ -514,7 +514,7 @@ TEST(TestTrajectory, sample_trajectory_velocity_with_interpolation_strange_witho
     EXPECT_NEAR(1.0, expected_state.accelerations[0], EPS);
   }
 }
-
+*/
 TEST(TestTrajectory, sample_trajectory_acceleration_with_interpolation) {
   auto full_msg = std::make_shared<trajectory_msgs::msg::JointTrajectory>();
   full_msg->header.stamp = rclcpp::Time(0);
@@ -572,7 +572,7 @@ TEST(TestTrajectory, sample_trajectory_acceleration_with_interpolation) {
     EXPECT_EQ(result, false);
   }
 
-  // Sample only on points testing of intermediate values is too complex and not necessary
+  // Sample only on points. Testing of intermediate values is too complex and not necessary
 
   // sample 1s after msg
   double velocity_first_seg = point_before_msg.velocities[0] +
