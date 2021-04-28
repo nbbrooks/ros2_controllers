@@ -115,10 +115,6 @@ Trajectory::sample(
       {
         first_state.velocities.resize(dim);
       }
-      if (!have_second_velocities)
-      {
-        second_state.velocities.resize(dim);
-      }
       if (!have_first_accelerations)
       {
         first_state.accelerations.resize(dim);
