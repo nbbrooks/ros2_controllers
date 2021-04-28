@@ -124,7 +124,7 @@ Trajectory::sample(
         second_state.accelerations.resize(dim);
       }
 
-      // Use the Euler-Richardson fomula for bounded error and stability
+      // Use the Euler-Richardson formula for bounded error
       // See https://www.compadre.org/PICUP/resources/Numerical-Integration/
 
       if (!have_second_velocities)
@@ -166,7 +166,6 @@ Trajectory::sample(
     interpolate_between_points(
       time_before_traj_msg_, state_before_traj_msg_, first_point_timestamp, first_point_in_msg,
       sample_time, expected_state);
-
     start_segment_itr = begin();  // no segments before the first
     end_segment_itr = begin();
     return true;
