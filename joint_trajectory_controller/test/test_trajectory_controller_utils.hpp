@@ -56,6 +56,21 @@ public:
     return ret;
   }
 
+  // This is a hack to be able to add back in the subscription if we have deactivated the controller and wany to reactivate it. When a controller is first set up, this subscription is originally added in configure() and the subscription is removed by deactivate(). We can't add the subscription back in with configure() after deactivate() because we are in PRIMARY_STATE_INACTIVE (configure() requires PRIMARY_STATE_UNCONFIGURED).
+  CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state) override
+  {
+    auto ret =
+      joint_trajectory_controller::JointTrajectoryController::on_activate(previous_state);
+
+    if(has_been_activated_before_) {
+      joint_cmd_sub_wait_set_.add_subscription(joint_command_subscriber_);
+    } else {
+      has_been_activated_before_ = true;
+    }
+
+    return ret;
+  }
+
   /**
   * @brief wait_for_trajectory block until a new JointTrajectory is received.
   * Requires that the executor is not spinned elsewhere between the
@@ -90,6 +105,7 @@ public:
   }
 
   rclcpp::WaitSet joint_cmd_sub_wait_set_;
+  bool has_been_activated_before_ = false;
 };
 
 class TrajectoryControllerTest : public ::testing::Test
@@ -150,6 +166,7 @@ public:
     rclcpp::Executor * executor = nullptr,
     bool separate_cmd_and_state_values = false)
   {
+    std::cout << "### SetUpAndActivateTrajectoryController" << std::endl;
     SetUpTrajectoryController(use_local_parameters);
 
     traj_node_ = traj_controller_->get_node();
@@ -218,6 +235,66 @@ public:
       joint_state_pos_[i] = INITIAL_POS_JOINTS[i];
       joint_state_vel_[i] = INITIAL_VEL_JOINTS[i];
       joint_state_acc_[i] = INITIAL_ACC_JOINTS[i];
+      state_interfaces.emplace_back(pos_state_interfaces_.back());
+      state_interfaces.emplace_back(vel_state_interfaces_.back());
+      state_interfaces.emplace_back(acc_state_interfaces_.back());
+    }
+
+    traj_controller_->assign_interfaces(std::move(cmd_interfaces), std::move(state_interfaces));
+    traj_controller_->activate();
+  }
+
+  // Same as ActivateTrajectoryController, but does not set joint_state_pos_ values
+  void ReactivateTrajectoryController(bool separate_cmd_and_state_values = false)
+  {
+    std::vector<hardware_interface::LoanedCommandInterface> cmd_interfaces;
+    std::vector<hardware_interface::LoanedStateInterface> state_interfaces;
+    pos_cmd_interfaces_.reserve(joint_names_.size());
+    vel_cmd_interfaces_.reserve(joint_names_.size());
+    acc_cmd_interfaces_.reserve(joint_names_.size());
+    pos_state_interfaces_.reserve(joint_names_.size());
+    vel_state_interfaces_.reserve(joint_names_.size());
+    acc_state_interfaces_.reserve(joint_names_.size());
+    for (size_t i = 0; i < joint_names_.size(); ++i) {
+      pos_cmd_interfaces_.emplace_back(
+        hardware_interface::CommandInterface(
+          joint_names_[i],
+          hardware_interface::HW_IF_POSITION, &joint_pos_[i]));
+      vel_cmd_interfaces_.emplace_back(
+        hardware_interface::CommandInterface(
+          joint_names_[i],
+          hardware_interface::HW_IF_VELOCITY, &joint_vel_[i]));
+      acc_cmd_interfaces_.emplace_back(
+        hardware_interface::CommandInterface(
+          joint_names_[i],
+          hardware_interface::HW_IF_ACCELERATION, &joint_acc_[i]));
+
+      pos_state_interfaces_.emplace_back(
+        hardware_interface::StateInterface(
+          joint_names_[i],
+          hardware_interface::HW_IF_POSITION,
+          separate_cmd_and_state_values ? &joint_state_pos_[i] : &joint_pos_[i]));
+      vel_state_interfaces_.emplace_back(
+        hardware_interface::StateInterface(
+          joint_names_[i],
+          hardware_interface::HW_IF_VELOCITY,
+          separate_cmd_and_state_values ? &joint_state_vel_[i] : &joint_vel_[i]));
+      acc_state_interfaces_.emplace_back(
+        hardware_interface::StateInterface(
+          joint_names_[i],
+          hardware_interface::HW_IF_ACCELERATION,
+          separate_cmd_and_state_values ? &joint_state_acc_[i] : &joint_acc_[i]));
+
+      // Add to export lists and set initial values
+      cmd_interfaces.emplace_back(pos_cmd_interfaces_.back());
+      cmd_interfaces.back().set_value(INITIAL_POS_JOINTS[i]);
+      cmd_interfaces.emplace_back(vel_cmd_interfaces_.back());
+      cmd_interfaces.back().set_value(INITIAL_VEL_JOINTS[i]);
+      cmd_interfaces.emplace_back(acc_cmd_interfaces_.back());
+      cmd_interfaces.back().set_value(INITIAL_ACC_JOINTS[i]);
+      // joint_state_pos_[i] = INITIAL_POS_JOINTS[i];
+      // joint_state_vel_[i] = INITIAL_VEL_JOINTS[i];
+      // joint_state_acc_[i] = INITIAL_ACC_JOINTS[i];
       state_interfaces.emplace_back(pos_state_interfaces_.back());
       state_interfaces.emplace_back(vel_state_interfaces_.back());
       state_interfaces.emplace_back(acc_state_interfaces_.back());

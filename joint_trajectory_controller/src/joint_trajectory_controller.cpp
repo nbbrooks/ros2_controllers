@@ -595,6 +595,11 @@ bool get_ordered_interfaces(
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 JointTrajectoryController::on_activate(const rclcpp_lifecycle::State &)
 {
+  // We talked about adding reset() here, but would it be more appropriate to do that in deactivate() ?
+  // if (!reset()) {
+  //   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
+  // }
+
   // order all joints in the storage
   for (const auto & interface : command_interface_types_) {
     auto it = std::find(
@@ -647,6 +652,27 @@ JointTrajectoryController::on_activate(const rclcpp_lifecycle::State &)
   resize_joint_trajectory_point(current_state_when_offset_, joint_names_.size());
   read_state_from_hardware(current_state_when_offset_);
 
+  // Need to add back in joint_command_subscriber_ - or maybe just create a function similar to reset(), but that doesn't touch joint_command_subscriber_?
+  auto callback = [this](const std::shared_ptr<trajectory_msgs::msg::JointTrajectory> msg)
+  -> void
+  {
+    if (!validate_trajectory_msg(*msg)) {
+      return;
+    }
+
+    // http://wiki.ros.org/joint_trajectory_controller/UnderstandingTrajectoryReplacement
+    // always replace old msg with new one for now
+    if (subscriber_is_active_) {
+      add_new_trajectory_msg(msg);
+    }
+  };
+
+  if(joint_command_subscriber_ == nullptr) {
+    joint_command_subscriber_ =
+      node_->create_subscription<trajectory_msgs::msg::JointTrajectory>(
+      "~/joint_trajectory", rclcpp::SystemDefaultsQoS(), callback);
+  }
+
   // TODO(karsten1987): activate subscriptions of subscriber
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;
 }
@@ -654,6 +680,11 @@ JointTrajectoryController::on_activate(const rclcpp_lifecycle::State &)
 rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn
 JointTrajectoryController::on_deactivate(const rclcpp_lifecycle::State &)
 {
+  // // Should we reset() in deactivate() or activate()?
+  if (!reset()) {
+    return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::ERROR;
+  }
+
   // TODO(anyone): How to halt when using effort commands?
   for (auto index = 0ul; index < joint_names_.size(); ++index) {
     joint_command_interface_[0][index].get().set_value(
@@ -666,6 +697,7 @@ JointTrajectoryController::on_deactivate(const rclcpp_lifecycle::State &)
   }
   release_interfaces();
 
+  // If we add reset() call above, can delete this duplicate setting
   subscriber_is_active_ = false;
 
   return rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn::SUCCESS;

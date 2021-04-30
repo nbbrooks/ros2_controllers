@@ -52,11 +52,13 @@
 #include "test_trajectory_controller_utils.hpp"
 #include "trajectory_msgs/msg/joint_trajectory.hpp"
 #include "trajectory_msgs/msg/joint_trajectory_point.hpp"
+#include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 
 using lifecycle_msgs::msg::State;
 using test_trajectory_controllers::TestableJointTrajectoryController;
 using test_trajectory_controllers::TrajectoryControllerTest;
 using test_trajectory_controllers::TrajectoryControllerTestParameterized;
+using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 void spin(rclcpp::executors::MultiThreadedExecutor * exe)
 {
@@ -230,6 +232,52 @@ TEST_P(TrajectoryControllerTestParameterized, activate)
 //
 //   executor.cancel();
 // }
+//
+
+TEST_P(
+  TrajectoryControllerTestParameterized, reactivation_with_offset)
+{
+  rclcpp::executors::SingleThreadedExecutor executor;
+  // default if false so it will not be actually set paramter
+  rclcpp::Parameter partial_joints_parameters("hardware_state_has_offset", true);
+  SetUpAndActivateTrajectoryController(true, {partial_joints_parameters}, &executor, true);
+
+  ASSERT_EQ(traj_controller_->get_current_state().id(), State::PRIMARY_STATE_ACTIVE);
+
+  // goal setup
+  std::vector<double> first_goal = {3.3, 4.4, 5.5};
+  std::vector<double> second_goal = {6.6, 8.8, 11.0};
+  double state_from_command_offset = 0.3;
+
+  // send msg
+  builtin_interfaces::msg::Duration time_from_start;
+  time_from_start.sec = 1;
+  time_from_start.nanosec = 0;
+  std::vector<std::vector<double>> points {{first_goal}};
+  publish(time_from_start, points);
+  traj_controller_->wait_for_trajectory(executor);
+  std::cout << "### 1. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+
+  updateController(rclcpp::Duration::from_seconds(0.5));
+  std::cout << "### 2. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+
+  traj_controller_->deactivate();
+  ASSERT_EQ(traj_controller_->get_current_state().id(), State::PRIMARY_STATE_INACTIVE);
+
+  // State interface should have offset from the command before starting a new trajectory
+  joint_state_pos_[0] = joint_pos_[0] - state_from_command_offset;
+  std::cout << "### 3. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+
+  ReactivateTrajectoryController(true);
+  ASSERT_EQ(traj_controller_->get_current_state().id(), State::PRIMARY_STATE_ACTIVE);
+
+  publish(time_from_start, points);
+  traj_controller_->wait_for_trajectory(executor);
+  traj_controller_->update();
+  std::cout << "### 4. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+
+  executor.cancel();
+}
 
 TEST_P(TrajectoryControllerTestParameterized, cleanup)
 {
