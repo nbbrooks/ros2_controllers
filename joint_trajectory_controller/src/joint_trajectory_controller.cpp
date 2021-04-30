@@ -630,6 +630,7 @@ JointTrajectoryController::on_activate(const rclcpp_lifecycle::State &)
     }
   }
 
+  // Should `read_state_from_hardware` be called before this?
   // Store 'home' pose
   traj_msg_home_ptr_ = std::make_shared<trajectory_msgs::msg::JointTrajectory>();
   traj_msg_home_ptr_->header.stamp.sec = 0;
