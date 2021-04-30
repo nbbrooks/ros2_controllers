@@ -275,6 +275,12 @@ TEST_P(
   traj_controller_->wait_for_trajectory(executor);
   traj_controller_->update();
   std::cout << "### 4. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+  traj_controller_->update();
+  std::cout << "### 5. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+  traj_controller_->update();
+  std::cout << "### 6. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
+  updateController(rclcpp::Duration::from_seconds(0.5));
+  std::cout << "### 7. " << joint_state_pos_[0] << "\t" << joint_pos_[0] << "\t" << first_goal[0] << "\t" << second_goal[0] << std::endl;
 
   executor.cancel();
 }

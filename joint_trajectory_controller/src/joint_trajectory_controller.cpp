@@ -133,6 +133,7 @@ JointTrajectoryController::update()
     fill_partial_goal(*new_external_msg);
     sort_to_local_joint_order(*new_external_msg);
     // TODO(denis): Add here integration of position and velocity
+    std::cout << "### traj_external_point_ptr_->update(*new_external_msg);" << std::endl;
     traj_external_point_ptr_->update(*new_external_msg);
   }
 
@@ -155,10 +156,11 @@ JointTrajectoryController::update()
   read_state_from_hardware(state_current);
 
   // currently carrying out a trajectory
-  if (traj_point_active_ptr_ && (*traj_point_active_ptr_)->has_trajectory_msg() == false) {
+  if (traj_point_active_ptr_ && (*traj_point_active_ptr_)->has_trajectory_msg()) {
     // if sampling the first time, set the point before you sample
     if (!(*traj_point_active_ptr_)->is_sampled_already()) {
       if (hardware_state_has_offset_) {
+        std::cout << "### Sampling with offset for first time since activation" << std::endl;
         (*traj_point_active_ptr_)->set_point_before_trajectory_msg(
           node_->now(), current_state_when_offset_);
       } else {
@@ -648,6 +650,7 @@ JointTrajectoryController::on_activate(const rclcpp_lifecycle::State &)
   traj_point_active_ptr_ = &traj_external_point_ptr_;
   last_state_publish_time_ = node_->now();
 
+  std::cout << "### Initialize current state storage if hardware state has tracking offset" << std::endl;
   // Initialize current state storage if hardware state has tracking offset
   resize_joint_trajectory_point(current_state_when_offset_, joint_names_.size());
   read_state_from_hardware(current_state_when_offset_);

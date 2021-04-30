@@ -14,6 +14,7 @@
 
 #include "joint_trajectory_controller/trajectory.hpp"
 
+#include <iostream>
 #include <memory>
 
 #include "hardware_interface/macros.hpp"
@@ -26,13 +27,16 @@ namespace joint_trajectory_controller
 
 Trajectory::Trajectory()
 : trajectory_start_time_(0), time_before_traj_msg_(0)
-{}
+{
+  std::cout << "### Trajectory::Trajectory 1" << std::endl;
+}
 
 Trajectory::Trajectory(
   std::shared_ptr<trajectory_msgs::msg::JointTrajectory> joint_trajectory)
 : trajectory_msg_(joint_trajectory),
   trajectory_start_time_(static_cast<rclcpp::Time>(joint_trajectory->header.stamp))
 {
+  std::cout << "### Trajectory::Trajectory 2" << std::endl;
 }
 
 Trajectory::Trajectory(
@@ -42,6 +46,7 @@ Trajectory::Trajectory(
 : trajectory_msg_(joint_trajectory),
   trajectory_start_time_(static_cast<rclcpp::Time>(joint_trajectory->header.stamp))
 {
+  std::cout << "### Trajectory::Trajectory 3" << std::endl;
   set_point_before_trajectory_msg(current_time, current_point);
   update(joint_trajectory);
 }
@@ -58,6 +63,7 @@ Trajectory::set_point_before_trajectory_msg(
 void
 Trajectory::update(std::shared_ptr<trajectory_msgs::msg::JointTrajectory> joint_trajectory)
 {
+  std::cout << "### Trajectory::update" << std::endl;
   trajectory_msg_ = joint_trajectory;
   trajectory_start_time_ = static_cast<rclcpp::Time>(joint_trajectory->header.stamp);
   sampled_already_ = false;
@@ -332,7 +338,10 @@ Trajectory::time_from_start() const
 bool
 Trajectory::has_trajectory_msg() const
 {
-  return !trajectory_msg_;
+  if(trajectory_msg_.get() == 0){
+    std::cout << "### Trajectory::has_trajectory_msg() " << (trajectory_msg_.get() != 0) << std::endl;
+  }
+  return trajectory_msg_.get() != 0;
 }
 
 }  // namespace joint_trajectory_controller
